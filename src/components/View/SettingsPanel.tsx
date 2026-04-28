@@ -8,71 +8,56 @@ export default function SettingsPanel() {
   const extractionInterval = selectedVideo?.extractionIntervalS ?? 0.5;
 
   return (
-    <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 space-y-4">
-      <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
-        Frame Settings
-      </h3>
+    <div className="space-y-5">
+      {/* Section label */}
+      <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Frame Settings</p>
 
       {/* Display interval */}
       <div>
-        <label className="block text-sm text-gray-300 mb-1">
-          Show frames every
-        </label>
-        <div className="flex items-center gap-2">
-          <input
-            type="range"
-            min={extractionInterval}
-            max={30}
-            step={extractionInterval}
-            value={viewSettings.intervalS}
-            onChange={(e) =>
-              setViewSettings({ intervalS: parseFloat(e.target.value) })
-            }
-            className="flex-1 accent-indigo-500"
-          />
-          <span className="text-sm text-gray-300 w-14 text-right shrink-0">
-            {viewSettings.intervalS}s
-          </span>
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-xs font-medium text-zinc-300">Show frames every</label>
+          <span className="text-xs font-medium text-indigo-400 tabular-nums">{viewSettings.intervalS}s</span>
         </div>
-        <p className="text-xs text-gray-500 mt-1">
-          Extracted at {extractionInterval}s interval
-        </p>
+        <input
+          type="range"
+          min={extractionInterval}
+          max={30}
+          step={extractionInterval}
+          value={viewSettings.intervalS}
+          onChange={(e) => setViewSettings({ intervalS: parseFloat(e.target.value) })}
+          className="w-full accent-indigo-500"
+        />
+        <p className="text-xs text-zinc-600 mt-1">Extracted at {extractionInterval}s</p>
       </div>
 
       {/* Diff threshold */}
       <div>
-        <label className="block text-sm text-gray-300 mb-1">
-          Difference threshold
-        </label>
-        <div className="flex items-center gap-2">
-          <input
-            type="range"
-            min={0}
-            max={100}
-            step={1}
-            value={viewSettings.diffThreshold}
-            onChange={(e) =>
-              setViewSettings({ diffThreshold: parseInt(e.target.value) })
-            }
-            className="flex-1 accent-indigo-500"
-          />
-          <span className="text-sm text-gray-300 w-10 text-right shrink-0">
-            {viewSettings.diffThreshold}%
-          </span>
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-xs font-medium text-zinc-300">Diff threshold</label>
+          <span className="text-xs font-medium text-indigo-400 tabular-nums">{viewSettings.diffThreshold}%</span>
         </div>
+        <input
+          type="range"
+          min={0}
+          max={100}
+          step={1}
+          value={viewSettings.diffThreshold}
+          onChange={(e) => setViewSettings({ diffThreshold: parseInt(e.target.value) })}
+          className="w-full accent-indigo-500"
+        />
       </div>
 
       {/* Diff mode */}
       <div>
-        <label className="block text-xs text-gray-400 mb-1.5">Diff mode</label>
-        <div className="flex rounded-md overflow-hidden border border-gray-600 text-xs">
+        <label className="block text-xs font-medium text-zinc-300 mb-2">Diff mode</label>
+        <div className="grid grid-cols-2 gap-1 p-1 bg-zinc-800 rounded-lg">
           <button
             onClick={() => setViewSettings({ diffMode: "rolling" })}
             className={[
-              "flex-1 py-1.5 transition-colors",
+              "py-1.5 text-xs font-medium rounded-md transition-all",
               viewSettings.diffMode === "rolling"
-                ? "bg-indigo-600 text-white"
-                : "text-gray-400 hover:bg-gray-700",
+                ? "bg-zinc-700 text-zinc-100 shadow-sm"
+                : "text-zinc-500 hover:text-zinc-300",
             ].join(" ")}
             title="Compare each frame against the previous displayed frame"
           >
@@ -81,20 +66,18 @@ export default function SettingsPanel() {
           <button
             onClick={() => setViewSettings({ diffMode: "continuous" })}
             className={[
-              "flex-1 py-1.5 border-l border-gray-600 transition-colors",
+              "py-1.5 text-xs font-medium rounded-md transition-all",
               viewSettings.diffMode === "continuous"
-                ? "bg-indigo-600 text-white"
-                : "text-gray-400 hover:bg-gray-700",
+                ? "bg-zinc-700 text-zinc-100 shadow-sm"
+                : "text-zinc-500 hover:text-zinc-300",
             ].join(" ")}
             title="Compare each frame against the immediately preceding extracted frame"
           >
             Continuous
           </button>
         </div>
-        <p className="text-xs text-gray-600 mt-1">
-          {viewSettings.diffMode === "rolling"
-            ? "vs. previous shown frame"
-            : "vs. previous extracted frame"}
+        <p className="text-xs text-zinc-600 mt-1.5">
+          {viewSettings.diffMode === "rolling" ? "vs. previous shown frame" : "vs. previous extracted frame"}
         </p>
       </div>
     </div>

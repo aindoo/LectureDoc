@@ -20,7 +20,7 @@ export default function EditFrames() {
   const [error, setError] = useState<string | null>(null);
   const [previewFrame, setPreviewFrame] = useState<FrameEntry | null>(null);
   const [leftWidth, setLeftWidth] = useState(240);
-  const [previewWidth, setPreviewWidth] = useState(320);
+  const [previewWidth, setPreviewWidth] = useState(300);
   const [previewOpen, setPreviewOpen] = useState(true);
 
   const leftResizeRef = useRef<{ x: number; w: number } | null>(null);
@@ -28,7 +28,6 @@ export default function EditFrames() {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevVideoRef = useRef<string | null>(null);
 
-  // Refs for keyboard handler (always current, no stale closure)
   const activeTabRef = useRef<ActiveTab>(activeTab);
   activeTabRef.current = activeTab;
   const framesRef = useRef<FrameEntry[]>(frames);
@@ -36,12 +35,11 @@ export default function EditFrames() {
   const previewFrameRef = useRef<FrameEntry | null>(previewFrame);
   previewFrameRef.current = previewFrame;
 
-  // Global resize mouse handlers
   useEffect(() => {
     function onMouseMove(e: MouseEvent) {
       if (leftResizeRef.current) {
         const d = e.clientX - leftResizeRef.current.x;
-        setLeftWidth(Math.max(160, Math.min(360, leftResizeRef.current.w + d)));
+        setLeftWidth(Math.max(180, Math.min(380, leftResizeRef.current.w + d)));
       }
       if (previewResizeRef.current) {
         const d = e.clientX - previewResizeRef.current.x;
@@ -60,7 +58,6 @@ export default function EditFrames() {
     };
   }, []);
 
-  // Keyboard shortcuts (←/→ navigate preview, Space toggle)
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       if (activeTabRef.current !== "editframes") return;
@@ -137,7 +134,6 @@ export default function EditFrames() {
     }
   }
 
-  // Debounce auto-apply when settings change
   useEffect(() => {
     if (!selectedVideo || selectedVideo.extractionStatus !== "ready") return;
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -145,7 +141,6 @@ export default function EditFrames() {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [viewSettings.intervalS, viewSettings.diffThreshold]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Initial apply when video changes
   useEffect(() => {
     if (!selectedVideo || selectedVideo.extractionStatus !== "ready") return;
     if (prevVideoRef.current === selectedVideo.ldocPath) return;
@@ -182,68 +177,81 @@ export default function EditFrames() {
 
   if (!selectedVideo) {
     return (
-      <div className="h-full flex items-center justify-center text-gray-500 text-sm">
-        Select a video from the Library tab.
+      <div className="h-full flex flex-col items-center justify-center gap-3 text-zinc-600">
+        <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1}
+            d="M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
+        </svg>
+        <p className="text-sm text-zinc-600">Select a video from the Library tab</p>
       </div>
     );
   }
 
   return (
-    <div className="flex h-full overflow-hidden">
+    <div className="flex h-full overflow-hidden bg-zinc-950">
       {/* Left settings panel */}
       <div
-        className="shrink-0 flex flex-col border-r border-gray-700 p-4 gap-4 overflow-y-auto"
+        className="shrink-0 flex flex-col bg-zinc-900 border-r border-zinc-800 overflow-y-auto"
         style={{ width: leftWidth }}
       >
-        <div>
-          <p className="text-sm font-medium text-gray-200 truncate" title={selectedVideo.filename}>
+        {/* Video info */}
+        <div className="px-4 pt-4 pb-3 border-b border-zinc-800">
+          <p className="text-sm font-medium text-zinc-100 truncate" title={selectedVideo.filename}>
             {selectedVideo.filename}
           </p>
-          <p className="text-xs text-gray-400 mt-0.5">
-            {selectedVideo.width}×{selectedVideo.height} ·{" "}
+          <p className="text-xs text-zinc-500 mt-0.5">
+            {selectedVideo.width > 0 ? `${selectedVideo.width}×${selectedVideo.height} · ` : ""}
             {Math.round(selectedVideo.durationSecs / 60)}m
-          </p>
-          <p className="text-xs text-gray-600 mt-0.5 truncate" title={selectedVideo.ldocPath}>
-            {selectedVideo.ldocPath.split("/").pop()}
           </p>
         </div>
 
-        <SettingsPanel />
+        {/* Settings */}
+        <div className="p-4 flex-1">
+          <SettingsPanel />
+        </div>
 
+        {/* Status */}
         {loadingFrames && (
-          <p className="text-xs text-indigo-400 animate-pulse">Applying…</p>
-        )}
-
-        {frames.length > 0 && (
-          <div className="border-t border-gray-700 pt-4 space-y-2">
-            <p className="text-xs text-gray-400">
-              {included.length} / {frames.length} frames selected
-            </p>
-            <button
-              onClick={previewDocument}
-              disabled={included.length === 0}
-              className="w-full py-2 text-sm bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-lg transition-colors"
-            >
-              Preview Document →
-            </button>
+          <div className="px-4 py-2 border-t border-zinc-800">
+            <p className="text-xs text-indigo-400 animate-pulse">Applying settings…</p>
           </div>
         )}
 
         {error && (
-          <div className="text-xs text-red-400 bg-red-900/30 border border-red-800 rounded p-2">
+          <div className="mx-4 mb-3 text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg p-2.5">
             {error}
+          </div>
+        )}
+
+        {/* Actions */}
+        {frames.length > 0 && (
+          <div className="p-4 border-t border-zinc-800 space-y-3">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-zinc-500">{included.length} / {frames.length} selected</span>
+              <span className="text-zinc-600">{frames.length - included.length} excluded</span>
+            </div>
+            <button
+              onClick={previewDocument}
+              disabled={included.length === 0}
+              className="w-full py-2 text-sm font-medium bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center justify-center gap-1.5"
+            >
+              Preview Document
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
           </div>
         )}
       </div>
 
       {/* Left resize handle */}
       <div
-        className="w-1 shrink-0 cursor-col-resize hover:bg-indigo-500/40 transition-colors"
+        className="w-px shrink-0 cursor-col-resize bg-zinc-800 hover:bg-indigo-500/60 transition-colors"
         onMouseDown={(e) => { leftResizeRef.current = { x: e.clientX, w: leftWidth }; e.preventDefault(); }}
       />
 
       {/* Middle frame gallery */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden bg-zinc-950">
         <FrameGallery
           onFrameSelect={(f) => setPreviewFrame(f)}
           selectedFrameIndex={previewFrame?.index ?? null}
@@ -253,7 +261,7 @@ export default function EditFrames() {
       {/* Right resize handle — hidden when preview closed */}
       {previewOpen && (
         <div
-          className="w-1 shrink-0 cursor-col-resize hover:bg-indigo-500/40 transition-colors"
+          className="w-px shrink-0 cursor-col-resize bg-zinc-800 hover:bg-indigo-500/60 transition-colors"
           onMouseDown={(e) => { previewResizeRef.current = { x: e.clientX, w: previewWidth }; e.preventDefault(); }}
         />
       )}
@@ -261,7 +269,7 @@ export default function EditFrames() {
       {/* Right preview panel */}
       {previewOpen ? (
         <div
-          className="shrink-0 border-l border-gray-700"
+          className="shrink-0 bg-zinc-900 border-l border-zinc-800"
           style={{ width: previewWidth }}
         >
           <FramePreviewPanel frame={previewFrame} onClose={() => setPreviewOpen(false)} />
@@ -269,7 +277,7 @@ export default function EditFrames() {
       ) : (
         <button
           onClick={() => setPreviewOpen(true)}
-          className="shrink-0 w-7 border-l border-gray-700 flex items-center justify-center text-gray-500 hover:text-gray-300 hover:bg-gray-800 transition-colors"
+          className="shrink-0 w-8 border-l border-zinc-800 flex items-center justify-center text-zinc-600 hover:text-zinc-300 hover:bg-zinc-900 transition-colors bg-zinc-950"
           title="Show preview panel"
         >
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

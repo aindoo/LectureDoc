@@ -996,6 +996,13 @@ fn consume_pending_open(state: tauri::State<'_, AppState>) -> Option<String> {
     state.pending_open.lock().unwrap().take()
 }
 
+// ─── Open external URL ───────────────────────────────────────────────────────
+
+#[tauri::command]
+fn open_external_url(url: String) -> Result<(), String> {
+    open::that(&url).map_err(|e| e.to_string())
+}
+
 // ─── Entry Point ─────────────────────────────────────────────────────────────
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -1023,6 +1030,7 @@ pub fn run() {
             cancel_extraction,
             save_ldoc_frame_log,
             consume_pending_open,
+            open_external_url,
         ])
         .build(tauri::generate_context!())
         .expect("error building Lecture Doc")

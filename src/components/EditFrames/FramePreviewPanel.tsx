@@ -14,12 +14,12 @@ function formatMs(ms: number): string {
 export default function FramePreviewPanel({ frame, onClose }: { frame: FrameEntry | null; onClose?: () => void }) {
   if (!frame) {
     return (
-      <div className="h-full flex flex-col items-center justify-center gap-3 text-gray-600">
-        <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className="h-full flex flex-col items-center justify-center gap-3 text-zinc-700">
+        <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1}
             d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
         </svg>
-        <p className="text-xs text-center px-4">Click a frame to preview</p>
+        <p className="text-xs text-zinc-600 text-center px-4">Click a frame to preview</p>
       </div>
     );
   }
@@ -31,12 +31,13 @@ export default function FramePreviewPanel({ frame, onClose }: { frame: FrameEntr
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
-      <div className="px-3 py-2 border-b border-gray-700 text-xs text-gray-400 font-medium shrink-0 flex items-center justify-between">
-        <span>Preview</span>
+      {/* Header */}
+      <div className="px-4 py-3 border-b border-zinc-800 shrink-0 flex items-center justify-between">
+        <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Preview</span>
         {onClose && (
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-300 transition-colors"
+            className="w-6 h-6 flex items-center justify-center text-zinc-600 hover:text-zinc-300 hover:bg-zinc-800 rounded-md transition-colors"
             title="Hide preview"
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -45,44 +46,64 @@ export default function FramePreviewPanel({ frame, onClose }: { frame: FrameEntr
           </button>
         )}
       </div>
-      <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-3">
-        <img
-          src={convertFileSrc(frame.path)}
-          alt={`Frame at ${formatMs(frame.timestampMs)}`}
-          className="w-full rounded shadow-lg"
-        />
-        <table className="w-full text-xs">
-          <tbody className="divide-y divide-gray-800">
-            <tr>
-              <td className="py-1.5 text-gray-500 pr-3 w-1/2">Timestamp</td>
-              <td className="py-1.5 text-gray-200 font-mono">{formatMs(frame.timestampMs)}</td>
-            </tr>
-            <tr>
-              <td className="py-1.5 text-gray-500 pr-3">Diff score</td>
-              <td className="py-1.5 text-gray-200">{frame.diffScore}%</td>
-            </tr>
-            <tr>
-              <td className="py-1.5 text-gray-500 pr-3">Status</td>
-              <td className="py-1.5">
-                <span className={[
-                  "px-1.5 py-0.5 rounded text-xs font-medium",
-                  isIncluded ? "bg-green-900/60 text-green-300" : "bg-red-900/60 text-red-300",
-                ].join(" ")}>
-                  {isIncluded ? "Included" : "Excluded"}
-                </span>
-                {isManual && (
-                  <span className="ml-1.5 px-1.5 py-0.5 rounded text-xs bg-blue-900/60 text-blue-300">
-                    manual
+
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto">
+        {/* Image */}
+        <div className="p-3">
+          <img
+            src={convertFileSrc(frame.path)}
+            alt={`Frame at ${formatMs(frame.timestampMs)}`}
+            className="w-full rounded-lg shadow-lg"
+          />
+        </div>
+
+        {/* Metadata */}
+        <div className="px-4 pb-4 space-y-0">
+          {[
+            {
+              label: "Status",
+              value: (
+                <div className="flex items-center gap-1.5">
+                  <span className={[
+                    "inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-md",
+                    isIncluded
+                      ? "bg-emerald-500/10 text-emerald-400"
+                      : "bg-red-500/10 text-red-400",
+                  ].join(" ")}>
+                    <span className={[
+                      "w-1.5 h-1.5 rounded-full",
+                      isIncluded ? "bg-emerald-400" : "bg-red-400",
+                    ].join(" ")} />
+                    {isIncluded ? "Included" : "Excluded"}
                   </span>
-                )}
-              </td>
-            </tr>
-            <tr>
-              <td className="py-1.5 text-gray-500 pr-3">Frame index</td>
-              <td className="py-1.5 text-gray-400">#{frame.index}</td>
-            </tr>
-          </tbody>
-        </table>
+                  {isManual && (
+                    <span className="inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-400">
+                      manual
+                    </span>
+                  )}
+                </div>
+              ),
+            },
+            {
+              label: "Timestamp",
+              value: <span className="text-xs font-mono text-zinc-200">{formatMs(frame.timestampMs)}</span>,
+            },
+            {
+              label: "Diff score",
+              value: <span className="text-xs text-zinc-200">{frame.diffScore}%</span>,
+            },
+            {
+              label: "Frame",
+              value: <span className="text-xs text-zinc-400">#{frame.index}</span>,
+            },
+          ].map(({ label, value }) => (
+            <div key={label} className="flex items-center justify-between py-2.5 border-b border-zinc-800/50 last:border-0">
+              <span className="text-xs text-zinc-500">{label}</span>
+              {value}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

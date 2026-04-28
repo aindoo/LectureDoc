@@ -59,6 +59,19 @@ interface AppStore {
   setPdfPath: (path: string | null, frameLogPath: string | null) => void;
   setIsGeneratingPdf: (v: boolean) => void;
 
+  // ── OCR index ────────────────────────────────────────────────────
+  ocrIndex: Record<number, string>;
+  isOcrIndexing: boolean;
+  ocrProgress: number;
+  ocrTrigger: number;
+  ocrAbortKey: number;
+  setOcrIndex: (index: Record<number, string>) => void;
+  setIsOcrIndexing: (v: boolean) => void;
+  setOcrProgress: (n: number) => void;
+  clearOcrIndex: () => void;
+  triggerReocr: () => void;
+  cancelOcr: () => void;
+
   // ── Preferences ──────────────────────────────────────────────────
   preferences: GlobalPreferences;
   preferencesOpen: boolean;
@@ -167,7 +180,9 @@ export const useStore = create<AppStore>((set, get) => ({
       frames: [],
       pdfPath: null,
       frameLogPath: null,
-      // Pre-populate view settings from the ldoc's saved frame settings
+      ocrIndex: {},
+      ocrProgress: 0,
+      isOcrIndexing: false,
       viewSettings: {
         intervalS: video.extractionIntervalS,
         diffThreshold: prefs.diffThreshold,
@@ -196,6 +211,19 @@ export const useStore = create<AppStore>((set, get) => ({
     })),
   setPdfPath: (path, frameLogPath) => set({ pdfPath: path, frameLogPath }),
   setIsGeneratingPdf: (v) => set({ isGeneratingPdf: v }),
+
+  // ── OCR index ────────────────────────────────────────────────────
+  ocrIndex: {},
+  isOcrIndexing: false,
+  ocrProgress: 0,
+  ocrTrigger: 0,
+  ocrAbortKey: 0,
+  setOcrIndex: (index) => set({ ocrIndex: index }),
+  setIsOcrIndexing: (v) => set({ isOcrIndexing: v }),
+  setOcrProgress: (n) => set({ ocrProgress: n }),
+  clearOcrIndex: () => set({ ocrIndex: {}, ocrProgress: 0, isOcrIndexing: false }),
+  triggerReocr: () => set((s) => ({ ocrTrigger: s.ocrTrigger + 1 })),
+  cancelOcr: () => set((s) => ({ ocrAbortKey: s.ocrAbortKey + 1, isOcrIndexing: false })),
 
   // ── Preferences ──────────────────────────────────────────────────
   preferences: DEFAULT_PREFS,

@@ -6,9 +6,15 @@ import Library from "./components/Library";
 import EditFrames from "./components/EditFrames";
 import View from "./components/View";
 import Preferences from "./components/Preferences";
+import UpdateBanner from "./components/UpdateBanner";
 import { useStore } from "./store";
 import { loadManifest, startExtraction, ldocMetaToVideoEntry } from "./components/Library/actions";
+import { useAutoOcr } from "./lib/autoOcr";
 import type { ActiveTab, ExtractionStatus, FrameEntry, LdocMetadata, VideoEntry, VideoMeta } from "./types";
+
+const APP_VERSION = "1.0.0";
+const VERSION_API = "https://radstacks.org/lecturedoc/api/version.php";
+const DOCS_URL    = "https://radstacks.org/lecturedoc/docs.php";
 
 const VIDEO_EXTS = new Set(["mp4","mov","mkv","avi","webm","m4v","mpg","mpeg","wmv","flv"]);
 
@@ -23,10 +29,12 @@ export default function App() {
     selectVideo, setFrames, upsertVideo,
   } = useStore();
 
+  useAutoOcr();
+
   const [isDragging, setIsDragging] = useState(false);
   const dragCounterRef = useRef(0);
-
-  // ── External-open routing ────────────────────────────────────────────────────
+  const [updateVersion, setUpdateVersion] = useState<string | null>(null);
+  const [updateDismissed, setUpdateDismissed] = useState(false);
 
   const handleExternalOpen = useCallback(async (ldocPath: string) => {
     try {
@@ -79,8 +87,6 @@ export default function App() {
     }
   }, [selectVideo, setViewSettings, setFrames, setVideoFrameCacheDir, setActiveTab, upsertVideo]);
 
-  // ── Drag-and-drop handler ────────────────────────────────────────────────────
-
   const handleDrop = useCallback(async (paths: string[]) => {
     const preferences = useStore.getState().preferences;
 
@@ -111,7 +117,6 @@ export default function App() {
           console.error("Failed to import dropped video:", e);
         }
       } else {
-        // Try as a directory
         try {
           const videos = await invoke<VideoMeta[]>("list_videos_in_dir", { folderPath: path });
           for (const video of videos) {
@@ -143,7 +148,23 @@ export default function App() {
     }
   }, [handleExternalOpen, setActiveTab]);
 
-  // On startup: scan manifest, load library, then consume any pending file-association open
+  useEffect(() => {
+    fetch(VERSION_API)
+      .then((r) => r.json())
+      .then((data: { version?: string; available?: boolean }) => {
+        if (data.available && data.version) {
+          const [rMaj, rMin, rPat] = data.version.split(".").map(Number);
+          const [lMaj, lMin, lPat] = APP_VERSION.split(".").map(Number);
+          const isNewer =
+            rMaj > lMaj ||
+            (rMaj === lMaj && rMin > lMin) ||
+            (rMaj === lMaj && rMin === lMin && rPat > lPat);
+          if (isNewer) setUpdateVersion(data.version);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
     invoke("scan_app_manifest")
       .catch(() => {})
@@ -154,7 +175,6 @@ export default function App() {
       .catch(() => {});
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Drag-and-drop via Tauri window events
   useEffect(() => {
     let unlisten: (() => void) | null = null;
 
@@ -180,7 +200,6 @@ export default function App() {
     return () => { unlisten?.(); };
   }, [handleDrop]);
 
-  // Subscribe to extraction events
   useEffect(() => {
     const unlisten: Array<() => void> = [];
 
@@ -281,36 +300,63 @@ export default function App() {
   ];
 
   return (
-    <div className="flex flex-col h-screen bg-gray-900 text-gray-100">
+    <div className="flex flex-col h-screen bg-zinc-950 text-zinc-100">
       {/* Tab bar */}
-      <div className="flex items-center border-b border-gray-700 bg-gray-900 px-4 pt-2 shrink-0">
-        <span className="text-sm font-semibold text-indigo-400 mr-6 select-none">
-          Lecture Doc
-        </span>
-        <div className="flex gap-1">
+      <div className="flex items-stretch border-b border-zinc-800 bg-zinc-950 shrink-0" style={{ height: 42 }}>
+        {/* App identity */}
+        <div className="flex items-center gap-2 px-4 mr-2 select-none shrink-0">
+          <div className="w-5 h-5 rounded-md bg-indigo-600 flex items-center justify-center shrink-0">
+            <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+          </div>
+          <span className="text-sm font-semibold text-zinc-100 tracking-tight">Lecture Doc</span>
+        </div>
+
+        {/* Separator */}
+        <div className="w-px bg-zinc-800 my-2.5 shrink-0" />
+
+        {/* Tabs */}
+        <div className="flex items-stretch gap-0.5 px-2">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={[
-                "flex items-center gap-1.5 px-4 py-2 text-sm rounded-t-md transition-colors",
+                "relative flex items-center gap-1.5 px-3 text-sm font-medium transition-colors",
                 activeTab === tab.id
-                  ? "bg-gray-800 text-white border-b-2 border-indigo-500"
-                  : "text-gray-400 hover:text-gray-200 hover:bg-gray-800",
+                  ? "text-zinc-100"
+                  : "text-zinc-500 hover:text-zinc-300",
               ].join(" ")}
             >
               {tab.icon}
               {tab.label}
+              {activeTab === tab.id && (
+                <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-indigo-500 rounded-t-full" />
+              )}
             </button>
           ))}
         </div>
-        <div className="ml-auto">
+
+        {/* Right side actions */}
+        <div className="ml-auto flex items-center gap-1 px-3">
+          <button
+            onClick={() => invoke("open_external_url", { url: DOCS_URL }).catch(() => {})}
+            className="p-1.5 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 rounded-md transition-colors"
+            title="Documentation"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75}
+                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </button>
           <button
             onClick={() => setPreferencesOpen(true)}
-            className="text-gray-400 hover:text-gray-200 px-2 py-1.5 rounded hover:bg-gray-800 transition-colors"
+            className="p-1.5 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 rounded-md transition-colors"
             title="Preferences"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75}
                 d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -318,6 +364,11 @@ export default function App() {
           </button>
         </div>
       </div>
+
+      {/* Update banner */}
+      {updateVersion && !updateDismissed && (
+        <UpdateBanner version={updateVersion} onDismiss={() => setUpdateDismissed(true)} />
+      )}
 
       {/* Tab content */}
       <div className="flex-1 overflow-hidden">
@@ -336,16 +387,19 @@ export default function App() {
 
       {/* Drag-and-drop overlay */}
       {isDragging && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none"
-          style={{ backgroundColor: "rgba(79, 70, 229, 0.18)", backdropFilter: "blur(2px)" }}
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none"
+          style={{ backgroundColor: "rgba(99, 102, 241, 0.12)", backdropFilter: "blur(2px)" }}
         >
-          <div className="bg-gray-900 border-2 border-dashed border-indigo-400 rounded-2xl px-14 py-10 text-center shadow-2xl">
-            <svg className="w-10 h-10 text-indigo-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-            </svg>
-            <p className="text-base font-semibold text-white">Drop to import</p>
-            <p className="text-sm text-gray-400 mt-1">Videos, folders, or .ldoc files</p>
+          <div className="bg-zinc-900 border-2 border-dashed border-indigo-500/60 rounded-2xl px-16 py-12 text-center shadow-2xl">
+            <div className="w-12 h-12 rounded-xl bg-indigo-600/20 flex items-center justify-center mx-auto mb-4">
+              <svg className="w-6 h-6 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75}
+                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+            </div>
+            <p className="text-base font-semibold text-zinc-100">Drop to import</p>
+            <p className="text-sm text-zinc-500 mt-1">Videos, folders, or .ldoc files</p>
           </div>
         </div>
       )}
